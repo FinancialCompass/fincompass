@@ -85,6 +85,7 @@ export interface Receipt {
   notes?: string;   // Additional user notes
   created_at: string;  // When the receipt was added to system
   updated_at: string;  // Last modification time
+  image_url?: string;  // URL to receipt image
 }
 
 // Example usage type for multiple receipts

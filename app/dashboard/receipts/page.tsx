@@ -64,7 +64,8 @@ const sampleReceipts: Receipt[] = [
         ],
         status: "PROCESSED",
         created_at: "2024-11-17T14:20:55.879Z",
-        updated_at: "2024-11-17T14:20:55.879Z"
+        updated_at: "2024-11-17T14:20:55.879Z",
+        image_url: "/images/receipts/receipt_1.jpg"
     },
     {
         summary: "Lunch at Main Street Restaurant",
@@ -95,7 +96,8 @@ const sampleReceipts: Receipt[] = [
         items: [],
         status: "PROCESSED",
         created_at: "2024-11-17T13:43:05.063Z",
-        updated_at: "2024-11-17T13:43:05.063Z"
+        updated_at: "2024-11-17T13:43:05.063Z",
+        image_url: "/images/receipts/receipt_2.JPG"
     },
     {
         summary: "Desserts from Main Street Restaurant",
@@ -148,7 +150,8 @@ const sampleReceipts: Receipt[] = [
         ],
         status: "PROCESSED",
         created_at: "2024-11-17T13:43:05.951Z",
-        updated_at: "2024-11-17T13:43:05.951Z"
+        updated_at: "2024-11-17T13:43:05.951Z",
+        image_url: "/images/receipts/receipt_3.JPG"
     }
 ];
 
