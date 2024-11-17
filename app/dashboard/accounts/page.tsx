@@ -1,9 +1,19 @@
-import PlaidLinkComponent from '@/components/plaid/plaid-component';
+'use client';
 
-export default function HomePage() {
+import { usePlaidStore } from '@/store/plaid-store';
+import PlaidLinkComponent from '@/components/plaid/PlaidLink';
+import FinancialDashboard from '@/components/plaid/FinancialDashboard';
+
+export default function AccountsPage() {
+    const { accessToken } = usePlaidStore();
+
     return (
-        <div className="p-4">
-            <PlaidLinkComponent />
+        <div>
+            {!accessToken ? (
+                <PlaidLinkComponent />
+            ) : (
+                <FinancialDashboard accessToken={accessToken} />
+            )}
         </div>
     );
 }

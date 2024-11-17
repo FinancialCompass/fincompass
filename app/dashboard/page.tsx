@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Overview } from "@/components/dashboard/overview"
 import { RecentReceipts } from "@/components/dashboard/recent-receipts"
 import { DollarSign, CreditCard, TrendingUp, Receipt } from "lucide-react"
-import  InsightCarousel  from "@/components/insightCarousel"
+import InsightCarousel from "@/components/insightCarousel"
 
 export default function DashboardPage() {
     return (
@@ -63,7 +63,7 @@ export default function DashboardPage() {
                             +12.5% from last month
                         </p>
                     </CardContent>
-                </Card>  
+                </Card>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">

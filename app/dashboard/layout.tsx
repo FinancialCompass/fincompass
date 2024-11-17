@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,12 +8,21 @@ import {
     CreditCard,
     Settings,
     ChevronLeft,
-    LogOut,
     Menu,
+    LogOut
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Separator } from "@/components/ui/separator"
+import { useUser } from '@/contexts/UserContext';
+import { useState, useEffect } from 'react'
 
 const navigation = [
     {
@@ -46,6 +54,16 @@ export default function DashboardLayout({
 }) {
     const [collapsed, setCollapsed] = useState(false)
     const pathname = usePathname()
+    const { user, signOut } = useUser();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!user) {
+            router.push('/');
+        }
+    }, [user, router]);
+
+    if (!user) return null;
 
     return (
         <div className="min-h-screen bg-background">
@@ -80,7 +98,6 @@ export default function DashboardLayout({
                             width={100}
                             height={100}
                         />
-                        
                     </div>
 
                     {/* Navigation */}
@@ -113,8 +130,58 @@ export default function DashboardLayout({
                         })}
                     </nav>
 
-                    {/* Footer */}
-                    <div className="p-4 border-t">
+                    {/* Footer with Avatar and Collapse Button */}
+                    <div className="p-4 border-t space-y-4">
+                        <div className="flex items-center justify-between">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-auto p-0">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={user.avatar} alt={`${user.name}'s avatar`} className="object-cover" />
+                                            <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                        </Avatar>
+                                        {!collapsed && (
+                                            <div className="ml-2 text-left">
+                                                <p className="text-sm font-medium">{user.name}</p>
+                                                <p className="text-xs text-muted-foreground">{user.email}</p>
+                                            </div>
+                                        )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-2" side="right">
+                                    <div className="flex items-center gap-2 p-2">
+                                        <Avatar className="h-12 w-12">
+                                            <AvatarImage src={user.avatar} alt={`${user.name}'s avatar`} className="object-cover" />
+                                            <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium">{user.name}</p>
+                                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                                        </div>
+                                    </div>
+                                    <Separator className="my-2" />
+                                    <div className="space-y-1">
+                                        <p className="px-2 text-sm text-muted-foreground">Account Status</p>
+                                        <div className="px-2 py-1">
+                                            <p className="text-sm font-medium">{user.plan?.name}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Next billing: {user.plan?.nextBilling}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Separator className="my-2" />
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full justify-start"
+                                        onClick={signOut}
+                                    >
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        Sign out
+                                    </Button>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                         <Button
                             variant="ghost"
                             size="icon"

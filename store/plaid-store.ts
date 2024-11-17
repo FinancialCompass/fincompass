@@ -1,13 +1,11 @@
-import { create } from 'zustand'
+import { create } from 'zustand';
 
-interface PlaidState {
-    accessToken: string | null
-    setAccessToken: (token: string | null) => void
-    clearAccessToken: () => void
+interface PlaidStore {
+    accessToken: string | null;
+    setAccessToken: (token: string) => void;
 }
 
-export const usePlaidStore = create<PlaidState>((set) => ({
+export const usePlaidStore = create<PlaidStore>((set) => ({
     accessToken: null,
     setAccessToken: (token) => set({ accessToken: token }),
-    clearAccessToken: () => set({ accessToken: null }),
-}))
+}));
