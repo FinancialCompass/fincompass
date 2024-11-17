@@ -73,19 +73,14 @@ export default function DashboardLayout({
                     )}
                 >
                     {/* Logo */}
-                    <div className="p-6 flex items-center gap-2">
+                    <div className="p-6 flex justify-center gap-2">
                         <Image
-                            src="/icons/logo.svg"
+                            src="/icons/logo1.png"
                             alt="Financial Compass Logo"
-                            width={32}
-                            height={32}
+                            width={100}
+                            height={100}
                         />
-                        {!collapsed && (
-                            <div>
-                                <h1 className="font-semibold">Financial Compass</h1>
-                                <p className="text-xs text-muted-foreground">Smart Analytics</p>
-                            </div>
-                        )}
+                        
                     </div>
 
                     {/* Navigation */}
