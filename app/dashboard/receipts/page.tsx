@@ -1,0 +1,293 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
+export default function DashboardPage() {
+    const [receipts, setReceipts] = useState<
+        { id: number; store_name: string; date: string; subtotal: number; items: { name: string; price: number; category: string}[] }[]
+    >([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedReceipt, setSelectedReceipt] = useState<null | typeof receipts[0]>(null);
+
+    // Handle file input state
+    const [file, setFile] = useState<File | null>(null);
+    const [responseMessage, setResponseMessage] = useState("");
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+    // Fetch receipts from the API
+    useEffect(() => {
+        const fetchReceipts = async () => {
+            try {
+                const response = await fetch("http://127.0.0.1:8000/api/checks/");
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                setReceipts(data);
+            } catch (error) {
+                console.error("Failed to fetch receipts:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchReceipts();
+    }, []);
+
+    // Handle file input change
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = event.target.files ? event.target.files[0] : null;
+        setFile(selectedFile);
+
+        // Preview the selected image
+        if (selectedFile) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(selectedFile);
+        } else {
+            setImagePreview(null);
+        }
+    };
+
+    // Handle drag over event
+    const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = "copy";
+    };
+
+    // Handle drop event
+    const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const droppedFile = event.dataTransfer.files[0];
+        setFile(droppedFile);
+
+        // Preview the dropped image
+        if (droppedFile) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(droppedFile);
+        }
+    };
+
+    // Handle form submission
+    const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (!file) {
+            setResponseMessage("Please select a file to upload.");
+            return;
+        }
+
+        setResponseMessage("Processing...");
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/api/receipts/process_receipt/", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Upload failed");
+            }
+
+            // Update the list of receipts after successful upload
+            const updatedReceipts = await fetch("http://127.0.0.1:8000/api/checks/");
+            const updatedData = await updatedReceipts.json();
+            setReceipts(updatedData);
+
+            setResponseMessage("Receipt processed successfully.");
+            setImagePreview(null); // Remove the preview image after processing
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    };
+
+    // Close the modal
+    const closeModal = () => setSelectedReceipt(null);
+
+    const getCategoryData = (items: { name: string; price: number; category: string }[]) => {
+        const categoryCounts: { [key: string]: number } = {};
+    
+        items.forEach(item => {
+            if (categoryCounts[item.category]) {
+                categoryCounts[item.category] += 1; // Increment count for each item in the category
+            } else {
+                categoryCounts[item.category] = 1; // Initialize count to 1 for the first item in the category
+            }
+        });
+    
+        return categoryCounts;
+    };
+
+    // Create pie chart data from category counts
+    const createPieChartData = (categoryCounts: { [key: string]: number }) => {
+        // If only one category exists, use a single color
+        const colors = ["#FF5733", "#33FF57", "#3357FF", "#FF33A6", "#FFC300"];
+        const pieColors =
+            Object.keys(categoryCounts).length === 1
+                ? ["#FF5733"] // Use one color if only one category exists
+                : colors.slice(0, Object.keys(categoryCounts).length);
+
+        return {
+            labels: Object.keys(categoryCounts),
+            datasets: [
+                {
+                    data: Object.values(categoryCounts),
+                    backgroundColor: pieColors,
+                    hoverBackgroundColor: pieColors.map((color) => color.replace("FF", "CC")), // Slightly darker colors for hover
+                },
+            ],
+        };
+    };
+
+
+    return (
+        <div className="flex flex-col gap-6">
+            {/* Upload Receipt Section */}
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Receipt Upload</h1>
+                <p className="text-muted-foreground">
+                    Upload your receipt image to analyze its details.
+                </p>
+                <form onSubmit={handleFormSubmit} className="mt-4">
+                    <div
+                        className="upload-container border-2 border-dashed border-gray-300 p-4 text-center mb-4"
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                    >
+                        <p>Select or drag-and-drop a receipt image to analyze</p>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            className="border p-2 rounded w-full mb-4"
+                            required
+                            style={{ display: "none" }}
+                            id="fileInput" // Add this id to connect with label
+                        />
+                        <label
+                            htmlFor="fileInput" // This should match the input's id
+                            className="inline-block bg-blue-500 text-white py-2 px-4 rounded cursor-pointer"
+                        >
+                            Select a file
+                        </label>
+                    </div>
+
+                    {imagePreview && (
+                        <img
+                            id="preview"
+                            src={imagePreview}
+                            alt="Receipt Preview"
+                            className="max-w-[300px] mx-auto mb-4"
+                        />
+                    )}
+
+                    <button
+                        type="submit"
+                        className="bg-blue-500 text-white py-2 px-4 rounded mt-4 w-full"
+                    >
+                        Process Receipt
+                    </button>
+                </form>
+
+                <div
+                    id="response"
+                    className="mt-4 p-4 border border-gray-300 rounded bg-gray-100"
+                >
+                    {responseMessage}
+                </div>
+            </div>
+
+            {/* Display Receipts Section */}
+            <div>
+                <h2 className="text-2xl font-bold tracking-tight">Your Receipts</h2>
+                <p className="text-muted-foreground">Browse through your uploaded receipts.</p>
+                {loading ? (
+                    <p className="text-center text-gray-500">Loading receipts...</p>
+                ) : (
+                    <div className="grid gap-4 mt-4 md:grid-cols-2 lg:grid-cols-3">
+                        {receipts.map((receipt) => {
+                            const categoryCounts = getCategoryData(receipt.items);
+                            const pieChartData = createPieChartData(categoryCounts);
+                            console.log(pieChartData);
+                            return (
+                                <Card
+                                    key={receipt.id}
+                                    className="cursor-pointer flex flex-col md:flex-row gap-4"
+                                >
+                                    {/* Left Side: Receipt Information */}
+                                    <div className="flex flex-col w-full md:w-2/3">
+                                        <CardHeader>
+                                            <CardTitle onClick={() => setSelectedReceipt(receipt)}>{receipt.store_name}</CardTitle>
+                                            <CardDescription>{receipt.date}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p className="text-gray-600 font-medium">
+                                                Total: ${receipt.subtotal}
+                                            </p>
+                                        </CardContent>
+                                    </div>
+
+
+                                    <div className="flex justify-center items-center w-full md:w-1/3">
+                                        <Pie data={pieChartData} />
+                                    </div>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Custom Modal for Receipt Details */}
+            {selectedReceipt && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                        <h2 className="text-2xl font-semibold mb-4">Receipt Details</h2>
+                        <p>
+                            <strong>Store Name:</strong> {selectedReceipt.store_name}
+                        </p>
+                        <p>
+                            <strong>Date:</strong> {selectedReceipt.date}
+                        </p>
+                        <p>
+                            <strong>Total:</strong> {selectedReceipt.subtotal}
+                        </p>
+                        <div className="mt-4">
+                            <h3 className="text-lg font-semibold">Items</h3>
+                            <ul className="mt-2 list-disc list-inside">
+                                {selectedReceipt.items.map((item, index) => (
+                                    <li key={index} className="text-gray-700">
+                                       {item.category} - {item.name} - ${item.price}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <button
+                            className="mt-4 w-full py-2 bg-blue-500 text-white rounded-lg"
+                            onClick={closeModal}
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
