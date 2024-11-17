@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Overview } from "@/components/dashboard/overview"
 import { RecentReceipts } from "@/components/dashboard/recent-receipts"
 import { DollarSign, CreditCard, TrendingUp, Receipt } from "lucide-react"
+import  InsightCarousel  from "@/components/insightCarousel"
 
 export default function DashboardPage() {
     return (
@@ -17,6 +18,18 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Current Budget</CardTitle>
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">$3,500.00</div>
+                        <p className="text-xs text-muted-foreground">
+                            Last Month: $2,750.00
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
@@ -29,13 +42,13 @@ export default function DashboardPage() {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Accounts</CardTitle>
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Total Sales Tax</CardTitle>
+                        <Receipt className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">3</div>
+                        <div className="text-2xl font-bold">$103.01</div>
                         <p className="text-xs text-muted-foreground">
-                            2 banks connected
+                            12.12% of total spent
                         </p>
                     </CardContent>
                 </Card>
@@ -50,19 +63,7 @@ export default function DashboardPage() {
                             +12.5% from last month
                         </p>
                     </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Recent Receipts</CardTitle>
-                        <Receipt className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">8</div>
-                        <p className="text-xs text-muted-foreground">
-                            Last 7 days
-                        </p>
-                    </CardContent>
-                </Card>
+                </Card>  
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -87,6 +88,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <RecentReceipts />
+                        <InsightCarousel />
                     </CardContent>
                 </Card>
             </div>
