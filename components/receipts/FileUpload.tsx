@@ -6,10 +6,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const FileUpload = () => {
     const [isDragging, setIsDragging] = useState(false);
-    const [file, setFile] = useState<File | null>(null);
-    const [uploading, setUploading] = useState(false);
-    const [url, setUrl] = useState("");
-    const [error, setError] = useState('');
+    const [files, setFiles] = useState<File[]>([]);
+    const [uploadStatus, setUploadStatus] = useState<{
+        [key: string]: {
+            uploading: boolean,
+            url: string,
+            error?: string
+        }
+    }>({});
 
     const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -21,21 +25,31 @@ const FileUpload = () => {
         setIsDragging(false);
     }, []);
 
-    interface FileUploadProps {
-        file: File;
-    }
-
     const validateFile = (file: File): boolean => {
         const validTypes = ['image/jpeg', 'image/png', 'image/heic'];
         const maxSize = 10 * 1024 * 1024; // 10MB
 
         if (!validTypes.includes(file.type)) {
-            setError('Please upload a valid image file (JPEG, PNG, or HEIC)');
+            setUploadStatus(prev => ({
+                ...prev,
+                [file.name]: {
+                    uploading: false,
+                    url: '',
+                    error: 'Please upload a valid image file (JPEG, PNG, or HEIC)'
+                }
+            }));
             return false;
         }
 
         if (file.size > maxSize) {
-            setError('File size must be less than 10MB');
+            setUploadStatus(prev => ({
+                ...prev,
+                [file.name]: {
+                    uploading: false,
+                    url: '',
+                    error: 'File size must be less than 10MB'
+                }
+            }));
             return false;
         }
 
@@ -45,71 +59,70 @@ const FileUpload = () => {
     const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         setIsDragging(false);
-        setError('');
 
-        const droppedFile = e.dataTransfer.files[0];
-        if (droppedFile && validateFile(droppedFile)) {
-            setFile(droppedFile);
-            setUrl("");  // Reset URL when new file is dropped
-        }
+        const droppedFiles = Array.from(e.dataTransfer.files);
+        const validFiles = droppedFiles.filter(validateFile);
+        setFiles(prev => [...prev, ...validFiles]);
     }, []);
 
     const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setError('');
-        const selectedFile = e.target.files?.[0];
-        if (selectedFile && validateFile(selectedFile)) {
-            setFile(selectedFile);
-            setUrl("");  // Reset URL when new file is selected
-        }
+        const selectedFiles = Array.from(e.target.files || []);
+        const validFiles = selectedFiles.filter(validateFile);
+        setFiles(prev => [...prev, ...validFiles]);
     }, []);
 
-    const removeFile = useCallback(() => {
-        setFile(null);
-        setError('');
-        setUrl("");
+    const removeFile = useCallback((fileName: string) => {
+        setFiles(prev => prev.filter(file => file.name !== fileName));
+        setUploadStatus(prev => {
+            const newStatus = { ...prev };
+            delete newStatus[fileName];
+            return newStatus;
+        });
     }, []);
 
-    const uploadFile = async () => {
-        try {
-            if (!file) {
-                setError('No file selected');
-                return;
+    const uploadFiles = async () => {
+        const uploadPromises = files.map(async (file) => {
+            try {
+                setUploadStatus(prev => ({
+                    ...prev,
+                    [file.name]: { uploading: true, url: '' }
+                }));
+
+                const data = new FormData();
+                data.set("file", file);
+
+                const uploadRequest = await fetch("/api/files/upload", {
+                    method: "POST",
+                    body: data,
+                });
+
+                if (!uploadRequest.ok) {
+                    throw new Error('Upload failed');
+                }
+
+                const signedUrl = await uploadRequest.json();
+                setUploadStatus(prev => ({
+                    ...prev,
+                    [file.name]: { uploading: false, url: signedUrl }
+                }));
+            } catch (e) {
+                console.error(e);
+                setUploadStatus(prev => ({
+                    ...prev,
+                    [file.name]: {
+                        uploading: false,
+                        url: '',
+                        error: 'Trouble uploading file'
+                    }
+                }));
             }
+        });
 
-            setUploading(true);
-            setError('');
-
-            const data = new FormData();
-            data.set("file", file);
-
-            const uploadRequest = await fetch("/api/files", {
-                method: "POST",
-                body: data,
-            });
-
-            if (!uploadRequest.ok) {
-                throw new Error('Upload failed');
-            }
-
-            const signedUrl = await uploadRequest.json();
-            setUrl(signedUrl);
-        } catch (e) {
-            console.error(e);
-            setError('Trouble uploading file');
-        } finally {
-            setUploading(false);
-        }
+        await Promise.all(uploadPromises);
     };
 
     return (
         <div className="w-full mx-auto space-y-4">
-            {error && (
-                <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-            )}
-
             <div
                 className={`relative border-2 border-dashed rounded-lg p-8 text-center ${isDragging
                     ? 'border-blue-500 bg-blue-50'
@@ -119,28 +132,39 @@ const FileUpload = () => {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                {file ? (
+                {files.length > 0 ? (
                     <div className="space-y-4">
-                        <div className="flex items-center justify-center space-x-2">
-                            <Image className="w-6 h-6 text-gray-500" />
-                            <span className="text-sm text-gray-500">{file.name}</span>
-                            <button
-                                onClick={removeFile}
-                                className="p-1 hover:bg-gray-200 rounded-full"
-                            >
-                                <X className="w-4 h-4 text-gray-500" />
-                            </button>
+                        <div className="space-y-2">
+                            {files.map((file) => (
+                                <div key={file.name} className="flex items-center justify-center space-x-2">
+                                    <Image className="w-6 h-6 text-gray-500" />
+                                    <span className="text-sm text-gray-500">{file.name}</span>
+                                    <button
+                                        onClick={() => removeFile(file.name)}
+                                        className="p-1 hover:bg-gray-200 rounded-full"
+                                    >
+                                        <X className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                    {uploadStatus[file.name]?.error && (
+                                        <span className="text-xs text-red-500">
+                                            {uploadStatus[file.name].error}
+                                        </span>
+                                    )}
+                                </div>
+                            ))}
                         </div>
 
                         <button
-                            onClick={uploadFile}
-                            disabled={uploading}
-                            className={`px-4 py-2 text-sm font-medium text-white rounded-md ${uploading
+                            onClick={uploadFiles}
+                            disabled={Object.values(uploadStatus).some(status => status.uploading)}
+                            className={`px-4 py-2 text-sm font-medium text-white rounded-md ${Object.values(uploadStatus).some(status => status.uploading)
                                 ? 'bg-gray-400 cursor-not-allowed'
                                 : 'bg-blue-500 hover:bg-blue-600'
                                 }`}
                         >
-                            {uploading ? 'Uploading...' : 'Upload Receipt'}
+                            {Object.values(uploadStatus).some(status => status.uploading)
+                                ? 'Uploading...'
+                                : 'Upload Receipts'}
                         </button>
                     </div>
                 ) : (
@@ -149,7 +173,7 @@ const FileUpload = () => {
                         <div className="mt-4">
                             <label className="cursor-pointer">
                                 <span className="mt-2 block text-sm font-medium text-gray-900">
-                                    Drop your receipt here, or{' '}
+                                    Drop your receipts here, or{' '}
                                     <span className="text-blue-500 hover:text-blue-600">
                                         browse
                                     </span>
@@ -159,25 +183,31 @@ const FileUpload = () => {
                                     className="hidden"
                                     onChange={handleFileSelect}
                                     accept="image/jpeg,image/png,image/heic"
+                                    multiple
                                 />
                             </label>
                             <p className="mt-1 text-xs text-gray-500">
-                                JPEG, PNG, or HEIC (max. 10MB)
+                                JPEG, PNG, or HEIC (max. 10MB per file)
                             </p>
                         </div>
                     </>
                 )}
             </div>
 
-            {url && (
-                <div className="mt-4 p-4 border rounded-lg bg-white">
-                    <img
-                        src={url}
-                        alt="Uploaded Receipt"
-                        className="max-w-full h-auto rounded-md"
-                    />
-                </div>
-            )}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(uploadStatus).map(([fileName, status]) => (
+                    status.url && (
+                        <div key={fileName} className="p-4 border rounded-lg bg-white">
+                            <p className="text-sm text-gray-500 mb-2">{fileName}</p>
+                            <img
+                                src={status.url}
+                                alt={`Uploaded Receipt - ${fileName}`}
+                                className="max-w-full h-auto rounded-md"
+                            />
+                        </div>
+                    )
+                ))}
+            </div>
         </div>
     );
 };

@@ -1,0 +1,55 @@
+Please analyze this receipt image and generate:
+1. A brief, unique description of the purchase/transaction (1 sentence that captures the key aspects like merchant type, main items, or purpose)
+2. Structured data in the following JSON format:
+
+{
+  "summary": string, // A unique, specific description (e.g., "Grocery run for fresh produce at Sprouts" or "Dessert order of three items from Main Street Restaurant")
+  "metadata": {
+    "merchant_name": string,
+    "merchant_address": {
+      "street": string,
+      "city": string,
+      "state": string,
+      "zip": string
+    },
+    "merchant_phone": string,
+    "date": string (YYYY-MM-DD format),
+    "time": string (HH:MM format),
+    "receipt_id": string
+  },
+  "transaction": {
+    "subtotal": number,
+    "tax": number,
+    "tip": number,
+    "total": number,
+    "payment_method": {
+      "type": string,
+      "entry_method": string,
+      "card_type": string (if applicable)
+    }
+  },
+  "items": [
+    {
+      "name": string,
+      "quantity": number,
+      "unit_price": number,
+      "total_price": number,
+      "category": string (e.g., "PRODUCE", "DESSERT")
+    }
+  ]
+}
+
+Instructions:
+1. For the summary, focus on:
+   - Type of establishment
+   - Main purpose of purchase
+   - Notable items or quantities
+   - Unique aspects of the transaction
+2. Preserve original capitalization for item names
+3. Convert all prices to numbers (remove currency symbols)
+4. If tax is not explicitly stated, set it to null
+5. For quantities, extract from item description if available
+6. Categorize items based on their nature
+7. Format dates in ISO format (YYYY-MM-DD)
+8. Include all available merchant identification numbers in metadata
+9. If any field is not present in the receipt, set it to null rather than omitting it

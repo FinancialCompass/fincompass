@@ -38,6 +38,7 @@ import {
     User,
     CreditCard,
 } from "lucide-react";
+import { useUser } from '@/contexts/UserContext';
 
 const settingsFormSchema = z.object({
     username: z.string().min(2).max(30),
@@ -50,16 +51,18 @@ const settingsFormSchema = z.object({
 
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
 
-const defaultValues: Partial<SettingsFormValues> = {
-    username: "johndoe",
-    email: "john@example.com",
-    language: "en",
-    currency: "usd",
-    emailNotifications: true,
-    pushNotifications: true,
-};
-
 export default function SettingsPage() {
+    const { user, signOut } = useUser();
+
+    const defaultValues: Partial<SettingsFormValues> = {
+        username: user?.name,
+        email: user?.email,
+        language: "en",
+        currency: "usd",
+        emailNotifications: true,
+        pushNotifications: true,
+    };
+
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsFormSchema),
         defaultValues,
