@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser } from '@/contexts/UserContext';
 import Image from 'next/image';
+import BrandFooter from '@/components/BrandFooter';
 
 const AuthPage = () => {
   const { signIn, signUp } = useUser();
@@ -38,13 +39,23 @@ const AuthPage = () => {
       {/* Left Side - Auth Form */}
       <div className="w-full md:w-1/2 flex flex-col p-8 lg:p-16">
         {/* Logo Section */}
-        <div className="mb-8 flex items-center gap-2">
-          <Image
-            src="/icons/logo1.png"
-            alt="Financial Compass Logo"
-            width={100}
-            height={100}
-          />
+        <div className="mb-12">
+          <div className="flex items-center gap-8">
+            <Image
+              src="/icons/logo1.png"
+              alt="Financial Compass Logo"
+              width={100}
+              height={100}
+            />
+            <div className="border-l-2 border-primary pl-8">
+              <h1 className="text-2xl font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                Unified Financial Intelligence
+              </h1>
+              <h2 className="text-xl text-muted-foreground mt-1">
+                Bridging Digital & Physical Money Management
+              </h2>
+            </div>
+          </div>
         </div>
 
         {/* Welcome Text */}
@@ -166,6 +177,7 @@ const AuthPage = () => {
             </div>
           </CardContent>
         </Card>
+        <BrandFooter />
       </div>
 
       {/* Right Side - Image */}
