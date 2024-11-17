@@ -19,27 +19,56 @@ interface PinataFile {
     url: string;
 }
 
-// Sample receipt data
-const sampleReceipts: Receipt[] = [
+type ItemCategory = "DESSERT" | "PRODUCE" | "OTHER" | "GROCERY" | "BEVERAGE" | "PREPARED_FOOD";
+
+interface Transaction {
+    subtotal: number;
+    tax: number | null;
+    tip: number | null;  // Added the required tip property
+    total: number;
+    payment_method: {
+        type: string;
+        entry_method: string;
+        card_type?: string;
+    };
+}
+
+interface ReceiptTemplate {
+    merchant_name: string;
+    merchant_address: {
+        street: string;
+        city: string;
+        state: string;
+        zip: string;
+    };
+    merchant_phone: string;
+    summary: string;
+    transaction: Transaction;  // Using the Transaction interface
+    items: Array<{
+        name: string;
+        quantity: number;
+        unit_price: number;
+        total_price: number;
+        category: ItemCategory;
+    }>;
+}
+
+// Sample data with proper transaction typing including tip
+const sampleReceiptData: ReceiptTemplate[] = [
     {
-        summary: "Grocery purchase at Sprouts with fresh produce",
-        metadata: {
-            merchant_name: "Sprouts Farmers Market",
-            merchant_address: {
-                street: "3030 Harbor Blvd. #D",
-                city: "Costa Mesa",
-                state: "CA",
-                zip: "92626"
-            },
-            merchant_phone: "(714)751-6399",
-            date: "2018-05-05",
-            time: "15:41",
-            receipt_id: "584472"
+        merchant_name: "Sprouts Farmers Market",
+        merchant_address: {
+            street: "3030 Harbor Blvd. #D",
+            city: "Costa Mesa",
+            state: "CA",
+            zip: "92626"
         },
+        merchant_phone: "(714)751-6399",
+        summary: "Grocery purchase at Sprouts with fresh produce",
         transaction: {
             subtotal: 17.87,
             tax: 1.45,
-            tip: null,
+            tip: null,  // Added tip field even if null
             total: 19.32,
             payment_method: {
                 type: "DEBIT",
@@ -61,115 +90,78 @@ const sampleReceipts: Receipt[] = [
                 total_price: 0.48,
                 category: "PRODUCE"
             }
-        ],
-        status: "PROCESSED",
-        created_at: "2024-11-17T14:20:55.879Z",
-        updated_at: "2024-11-17T14:20:55.879Z",
-        image_url: "/images/receipts/receipt_1.jpg"
+        ]
     },
     {
-        summary: "Lunch at Main Street Restaurant",
-        metadata: {
-            merchant_name: "Main Street Restaurant",
-            merchant_address: {
-                street: "6332 Business Drive",
-                city: "Palo Alto",
-                state: "CA",
-                zip: "94301"
-            },
-            merchant_phone: "575-1628095",
-            date: "2017-04-07",
-            time: "11:36",
-            receipt_id: "819543"
+        merchant_name: "Main Street Restaurant",
+        merchant_address: {
+            street: "6332 Business Drive",
+            city: "Palo Alto",
+            state: "CA",
+            zip: "94301"
         },
+        merchant_phone: "575-1628095",
+        summary: "Lunch at Main Street Restaurant",
         transaction: {
             subtotal: 25.23,
-            tax: null,
-            tip: 3.78,
-            total: 29.01,
+            tax: 2.15,
+            tip: 3.78,  // Example with a tip
+            total: 31.16,
             payment_method: {
                 type: "CREDIT",
                 entry_method: "SWIPE",
                 card_type: "DISCOVER"
             }
         },
-        items: [],
-        status: "PROCESSED",
-        created_at: "2024-11-17T13:43:05.063Z",
-        updated_at: "2024-11-17T13:43:05.063Z",
-        image_url: "/images/receipts/receipt_2.JPG"
-    },
-    {
-        summary: "Desserts from Main Street Restaurant",
-        metadata: {
-            merchant_name: "Main Street Restaurant",
-            merchant_address: {
-                street: "6332 Business Drive",
-                city: "Palo Alto",
-                state: "CA",
-                zip: "94301"
-            },
-            merchant_phone: "575-1628095",
-            date: "2017-04-07",
-            time: "14:47",
-            receipt_id: "826425"
-        },
-        transaction: {
-            subtotal: 12.00,
-            tax: null,
-            tip: 2.16,
-            total: 14.16,
-            payment_method: {
-                type: "CREDIT",
-                entry_method: "SWIPE",
-                card_type: "DISCOVER"
-            }
-        },
-        items: [
-            {
-                name: "Chocolate Chip Cookie",
-                quantity: 1,
-                unit_price: 5.00,
-                total_price: 5.00,
-                category: "DESSERT"
-            },
-            {
-                name: "Apple Pie",
-                quantity: 1,
-                unit_price: 3.00,
-                total_price: 3.00,
-                category: "DESSERT"
-            },
-            {
-                name: "Lava Cake",
-                quantity: 1,
-                unit_price: 4.00,
-                total_price: 4.00,
-                category: "DESSERT"
-            }
-        ],
-        status: "PROCESSED",
-        created_at: "2024-11-17T13:43:05.951Z",
-        updated_at: "2024-11-17T13:43:05.951Z",
-        image_url: "/images/receipts/receipt_3.JPG"
+        items: []
     }
 ];
 
 const ReceiptPage = () => {
-    const [receipts, setReceipts] = useState<PinataFile[]>([]);
+    const [receipts, setReceipts] = useState<Receipt[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Simulated OCR processing with proper typing
+    const simulateOCR = (file: PinataFile): Receipt => {
+        // Get random sample data
+        const sampleData = sampleReceiptData[Math.floor(Math.random() * sampleReceiptData.length)];
+
+        return {
+            summary: sampleData.summary,
+            metadata: {
+                merchant_name: sampleData.merchant_name,
+                merchant_address: sampleData.merchant_address,
+                merchant_phone: sampleData.merchant_phone,
+                date: new Date(file.created_at).toISOString().split('T')[0],
+                time: new Date(file.created_at).toTimeString().split(' ')[0],
+                receipt_id: file.id
+            },
+            transaction: sampleData.transaction,  // Now properly typed with tip field
+            items: sampleData.items,
+            status: "PROCESSED",
+            created_at: file.created_at,
+            updated_at: file.created_at,
+            image_url: file.url
+        };
+    };
 
     const fetchReceipts = async () => {
         try {
             setLoading(true);
+            setError(null);
+
             const response = await fetch('/api/files/retrieve');
             if (!response.ok) {
                 throw new Error('Failed to fetch receipts');
             }
-            const data = await response.json();
-            setReceipts(data);
+
+            const pinataFiles: PinataFile[] = await response.json();
+            const processedReceipts = pinataFiles.map(simulateOCR);
+
+            setReceipts(processedReceipts);
         } catch (err) {
+            console.error('Error fetching receipts:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch receipts');
         } finally {
             setLoading(false);
@@ -180,65 +172,59 @@ const ReceiptPage = () => {
         fetchReceipts();
     }, []);
 
-    const handleUploadSuccess = () => {
-        fetchReceipts();
+    const handleUploadSuccess = async () => {
+        await fetchReceipts();
     };
 
     return (
         <div className="container mx-auto py-6 space-y-6">
-            {/* Header */}
             <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">Upload Receipt</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Receipt Scanner</h1>
                 <p className="text-gray-500">
-                    Upload your receipt to track expenses and get insights
+                    Upload your receipts to track expenses and get instant analysis
                 </p>
             </div>
 
-            {/* Main Upload Section */}
             <Card>
-                <CardHeader className="flex flex-col items-center justify-center text-center">
-                    <CardTitle>Receipt Scanner</CardTitle>
+                <CardHeader>
+                    <CardTitle>Upload Receipts</CardTitle>
                     <CardDescription>
-                        Take a photo or upload an image of your receipt
+                        Drop your receipt images or click to browse
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <FileUpload />
+                    <FileUpload onUploadSuccess={handleUploadSuccess} />
                 </CardContent>
             </Card>
 
-            {/* Receipts Image Gallery */}
-            {loading ? (
-                <div className="text-center py-8">Loading receipts...</div>
-            ) : error ? (
-                <div className="text-center py-8 text-red-500">{error}</div>
-            ) : (
-                <div className="mt-8">
-                    <h2 className="text-2xl font-semibold mb-4">Uploaded Images</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {receipts.map((receipt) => (
-                            <Card key={receipt.id} className="overflow-hidden">
-                                <CardContent className="p-4">
-                                    <img
-                                        src={receipt.url}
-                                        alt={receipt.name}
-                                        className="w-full h-48 object-cover rounded-md mb-4"
-                                    />
-                                    <h3 className="font-semibold">{receipt.name}</h3>
-                                    <p className="text-sm text-gray-500">
-                                        Uploaded: {new Date(receipt.created_at).toLocaleDateString()}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Sample Receipt Dashboard */}
-            <div className="mt-12">
-                <h2 className="text-2xl font-semibold mb-4">Receipt Analysis Dashboard</h2>
-                <ReceiptDashboard receipts={sampleReceipts} />
+            <div className="mt-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Receipt Analysis</CardTitle>
+                        <CardDescription>
+                            Track your spending and view receipt details
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <div className="text-center py-8">
+                                <p className="text-gray-500">Processing your receipts...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="text-center py-8">
+                                <p className="text-red-500">{error}</p>
+                                <button
+                                    onClick={fetchReceipts}
+                                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        ) : (
+                            <ReceiptDashboard receipts={receipts} />
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

@@ -1,19 +1,24 @@
 'use client'
 
 import { useState, useCallback } from 'react';
-import { Upload, X, Image, AlertCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const FileUpload = () => {
+interface FileUploadProps {
+    onUploadSuccess?: () => void;
+}
+
+const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [uploadStatus, setUploadStatus] = useState<{
         [key: string]: {
-            uploading: boolean,
-            url: string,
-            error?: string
-        }
+            uploading: boolean;
+            url: string;
+            error?: string;
+        };
     }>({});
+    const [isUploading, setIsUploading] = useState(false);
 
     const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -35,7 +40,7 @@ const FileUpload = () => {
                 [file.name]: {
                     uploading: false,
                     url: '',
-                    error: 'Please upload a valid image file (JPEG, PNG, or HEIC)'
+                    error: 'Invalid file type. Please upload JPEG, PNG, or HEIC'
                 }
             }));
             return false;
@@ -47,7 +52,7 @@ const FileUpload = () => {
                 [file.name]: {
                     uploading: false,
                     url: '',
-                    error: 'File size must be less than 10MB'
+                    error: 'File too large. Maximum size is 10MB'
                 }
             }));
             return false;
@@ -81,53 +86,72 @@ const FileUpload = () => {
     }, []);
 
     const uploadFiles = async () => {
-        const uploadPromises = files.map(async (file) => {
-            try {
-                setUploadStatus(prev => ({
-                    ...prev,
-                    [file.name]: { uploading: true, url: '' }
-                }));
+        if (files.length === 0 || isUploading) return;
 
-                const data = new FormData();
-                data.set("file", file);
+        setIsUploading(true);
+        let hasError = false;
 
-                const uploadRequest = await fetch("/api/files/upload", {
-                    method: "POST",
-                    body: data,
-                });
+        try {
+            const uploadPromises = files.map(async (file) => {
+                try {
+                    setUploadStatus(prev => ({
+                        ...prev,
+                        [file.name]: { uploading: true, url: '' }
+                    }));
 
-                if (!uploadRequest.ok) {
-                    throw new Error('Upload failed');
-                }
+                    const formData = new FormData();
+                    formData.append("file", file);
 
-                const signedUrl = await uploadRequest.json();
-                setUploadStatus(prev => ({
-                    ...prev,
-                    [file.name]: { uploading: false, url: signedUrl }
-                }));
-            } catch (e) {
-                console.error(e);
-                setUploadStatus(prev => ({
-                    ...prev,
-                    [file.name]: {
-                        uploading: false,
-                        url: '',
-                        error: 'Trouble uploading file'
+                    const response = await fetch("/api/files/upload", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Upload failed');
                     }
-                }));
-            }
-        });
 
-        await Promise.all(uploadPromises);
+                    const { url } = await response.json();
+
+                    setUploadStatus(prev => ({
+                        ...prev,
+                        [file.name]: { uploading: false, url }
+                    }));
+                } catch (error) {
+                    hasError = true;
+                    console.error(`Error uploading ${file.name}:`, error);
+                    setUploadStatus(prev => ({
+                        ...prev,
+                        [file.name]: {
+                            uploading: false,
+                            url: '',
+                            error: 'Failed to upload file'
+                        }
+                    }));
+                }
+            });
+
+            await Promise.all(uploadPromises);
+
+            if (!hasError) {
+                setFiles([]);
+                setUploadStatus({});
+                onUploadSuccess?.();
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     return (
-        <div className="w-full mx-auto space-y-4">
+        <div className="w-full space-y-4">
+            {/* Drop Zone */}
             <div
-                className={`relative border-2 border-dashed rounded-lg p-8 text-center ${isDragging
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 bg-gray-50'
-                    } transition-colors duration-200`}
+                className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+                    ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'}
+                    transition-colors duration-200`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
@@ -136,78 +160,79 @@ const FileUpload = () => {
                     <div className="space-y-4">
                         <div className="space-y-2">
                             {files.map((file) => (
-                                <div key={file.name} className="flex items-center justify-center space-x-2">
-                                    <Image className="w-6 h-6 text-gray-500" />
-                                    <span className="text-sm text-gray-500">{file.name}</span>
-                                    <button
-                                        onClick={() => removeFile(file.name)}
-                                        className="p-1 hover:bg-gray-200 rounded-full"
-                                    >
-                                        <X className="w-4 h-4 text-gray-500" />
-                                    </button>
-                                    {uploadStatus[file.name]?.error && (
-                                        <span className="text-xs text-red-500">
-                                            {uploadStatus[file.name].error}
-                                        </span>
-                                    )}
+                                <div key={file.name} className="flex items-center justify-between p-2 bg-white rounded-md">
+                                    <div className="flex items-center space-x-2">
+                                        <ImageIcon className="w-5 h-5 text-gray-500" />
+                                        <span className="text-sm text-gray-700">{file.name}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        {uploadStatus[file.name]?.error && (
+                                            <span className="text-xs text-red-500">
+                                                {uploadStatus[file.name].error}
+                                            </span>
+                                        )}
+                                        <button
+                                            onClick={() => removeFile(file.name)}
+                                            className="p-1 hover:bg-gray-100 rounded-full"
+                                        >
+                                            <X className="w-4 h-4 text-gray-500" />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
 
                         <button
                             onClick={uploadFiles}
-                            disabled={Object.values(uploadStatus).some(status => status.uploading)}
-                            className={`px-4 py-2 text-sm font-medium text-white rounded-md ${Object.values(uploadStatus).some(status => status.uploading)
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-blue-500 hover:bg-blue-600'
-                                }`}
+                            disabled={isUploading || files.length === 0}
+                            className={`w-full px-4 py-2 text-sm font-medium text-white rounded-md
+                                ${isUploading || files.length === 0
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-500 hover:bg-blue-600'}
+                                transition-colors duration-200`}
                         >
-                            {Object.values(uploadStatus).some(status => status.uploading)
-                                ? 'Uploading...'
-                                : 'Upload Receipts'}
+                            {isUploading ? 'Uploading...' : 'Upload Receipts'}
                         </button>
                     </div>
                 ) : (
-                    <>
+                    <label className="cursor-pointer">
                         <Upload className="mx-auto h-12 w-12 text-gray-400" />
                         <div className="mt-4">
-                            <label className="cursor-pointer">
-                                <span className="mt-2 block text-sm font-medium text-gray-900">
-                                    Drop your receipts here, or{' '}
-                                    <span className="text-blue-500 hover:text-blue-600">
-                                        browse
-                                    </span>
-                                </span>
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    onChange={handleFileSelect}
-                                    accept="image/jpeg,image/png,image/heic"
-                                    multiple
-                                />
-                            </label>
+                            <span className="text-sm font-medium text-gray-900">
+                                Drop receipts here or click to browse
+                            </span>
+                            <input
+                                type="file"
+                                className="hidden"
+                                onChange={handleFileSelect}
+                                accept="image/jpeg,image/png,image/heic"
+                                multiple
+                            />
                             <p className="mt-1 text-xs text-gray-500">
                                 JPEG, PNG, or HEIC (max. 10MB per file)
                             </p>
                         </div>
-                    </>
+                    </label>
                 )}
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(uploadStatus).map(([fileName, status]) => (
-                    status.url && (
-                        <div key={fileName} className="p-4 border rounded-lg bg-white">
-                            <p className="text-sm text-gray-500 mb-2">{fileName}</p>
-                            <img
-                                src={status.url}
-                                alt={`Uploaded Receipt - ${fileName}`}
-                                className="max-w-full h-auto rounded-md"
-                            />
-                        </div>
-                    )
-                ))}
-            </div>
+            {/* Upload Progress/Preview */}
+            {Object.entries(uploadStatus).some(([_, status]) => status.url) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(uploadStatus).map(([fileName, status]) => (
+                        status.url && (
+                            <div key={fileName} className="p-4 border rounded-lg bg-white">
+                                <p className="text-sm font-medium text-gray-700 mb-2">{fileName}</p>
+                                <img
+                                    src={status.url}
+                                    alt={`Receipt - ${fileName}`}
+                                    className="w-full h-48 object-cover rounded-md"
+                                />
+                            </div>
+                        )
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
