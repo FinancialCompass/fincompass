@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pie } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { PinataSDK } from "pinata";
+
+
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 export default function DashboardPage() {
@@ -17,6 +20,10 @@ export default function DashboardPage() {
     const [file, setFile] = useState<File | null>(null);
     const [responseMessage, setResponseMessage] = useState("");
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const pinata = new PinataSDK({
+        pinataJwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJiN2U2ZDU0YS1lMmVmLTRhN2QtYWJmOC1lNGI1ZmU1NmEzMmEiLCJlbWFpbCI6ImFuZHJld2RtaXQyMDIxQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI5ZTI4MWQ4MTU5MmFkMzlmZjA5ZCIsInNjb3BlZEtleVNlY3JldCI6ImNlODE1OTczNDM4Zjg0M2U0MGVmZjg0NGRkN2YwOGRkYjJlNWI4MTQ2ZTRhM2Q3YjdmZWNkYjRmZDFlMmRkZGQiLCJleHAiOjE3NjMzOTAwMzl9.QkhhlGlwk23pS_DfTZ45lUnqhZIG5E87dXjA8uemZ3E",
+        pinataGateway: "white-bizarre-opossum-706.mypinata.cloud",
+      });
 
     // Fetch receipts from the API
     useEffect(() => {
@@ -61,6 +68,12 @@ export default function DashboardPage() {
         event.stopPropagation();
         event.dataTransfer.dropEffect = "copy";
     };
+    const calculateTotalCostForAllReceipts = (receipts: { items: { name: string; price: string | number; category: string }[] }[]) => {
+        return receipts.reduce((total, receipt) => {
+            const receiptTotal = receipt.items.reduce((sum, item) => sum + Number(item.price), 0);
+            return total + receiptTotal;
+        }, 0);
+    };
 
     // Handle drop event
     const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -90,12 +103,13 @@ export default function DashboardPage() {
         }
 
         setResponseMessage("Processing...");
-
+        const upload = await pinata.upload.file(file);
+        console.log(upload.cid);
         const formData = new FormData();
         formData.append("file", file);
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/api/receipts/process_receipt/", {
+            const response = await fetch(`http://127.0.0.1:8000/api/receipts/process_receipt/`, {
                 method: "POST",
                 body: formData,
             });
@@ -217,6 +231,7 @@ export default function DashboardPage() {
             {/* Display Receipts Section */}
             <div>
                 <h2 className="text-2xl font-bold tracking-tight">Your Receipts</h2>
+                <h2>Total spent: <span className="text-red-500">${calculateTotalCostForAllReceipts(receipts).toFixed(2)}</span></h2>
                 <p className="text-muted-foreground">Browse through your uploaded receipts.</p>
                 {loading ? (
                     <p className="text-center text-gray-500">Loading receipts...</p>
@@ -245,7 +260,7 @@ export default function DashboardPage() {
                                     </div>
 
 
-                                    <div className="flex justify-center items-center w-full md:w-1/3">
+                                    <div className="flex justify-center items-center w-full md:w-1/3 overflow-auto max-h-96">
                                         <Pie data={pieChartData} />
                                     </div>
                                 </Card>
@@ -267,17 +282,27 @@ export default function DashboardPage() {
                             <strong>Date:</strong> {selectedReceipt.date}
                         </p>
                         <p>
-                            <strong>Total:</strong> {selectedReceipt.subtotal}
+                            <strong>Total:</strong> ${selectedReceipt.subtotal}
                         </p>
-                        <div className="mt-4">
-                            <h3 className="text-lg font-semibold">Items</h3>
-                            <ul className="mt-2 list-disc list-inside">
-                                {selectedReceipt.items.map((item, index) => (
-                                    <li key={index} className="text-gray-700">
-                                       {item.category} - {item.name} - ${item.price}
-                                    </li>
-                                ))}
-                            </ul>
+                        <div className="overflow-x-auto overflow-y-auto mt-2 max-h-80">
+                            <table className="table-auto w-full border-collapse border border-gray-300 overflow-y-auto">
+                                <thead>
+                                    <tr>
+                                        <th className="border border-gray-300 px-4 py-2 text-left">Category</th>
+                                        <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
+                                        <th className="border border-gray-300 px-4 py-2 text-right">Price ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedReceipt.items.map((item, index) => (
+                                        <tr key={index}>
+                                            <td className="border border-gray-300 px-4 py-2">{item.category}</td>
+                                            <td className="border border-gray-300 px-4 py-2">{item.name}</td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right">{item.price}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                         <button
                             className="mt-4 w-full py-2 bg-blue-500 text-white rounded-lg"
