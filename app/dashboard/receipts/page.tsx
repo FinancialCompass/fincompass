@@ -200,7 +200,7 @@ const ReceiptPage = () => {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <FileUpload onSuccess={handleUploadSuccess} />
+                    <FileUpload />
                 </CardContent>
             </Card>
 
